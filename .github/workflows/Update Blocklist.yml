@@ -29,6 +29,10 @@ jobs:
           sed -E 's/^\|\|/0.0.0.0 /' tmp/pro.txt > pro.txt
           sed -E 's/^\|\|/0.0.0.0 /' tmp/tif.medium.txt > tif.medium.txt
 
+          # Bỏ dấu "^" ở cuối dòng (nếu có)
+          sed -i -E 's/\^$//' pro.txt
+          sed -i -E 's/\^$//' tif.medium.txt
+
           # (Tuỳ chọn) Gộp 2 file thành 1 file duy nhất, bỏ dòng trùng
           cat pro.txt tif.medium.txt | sort -u > merged.txt
 
