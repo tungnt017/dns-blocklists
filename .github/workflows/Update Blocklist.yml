@@ -1,0 +1,45 @@
+name: Update Blocklist
+
+on:
+  schedule:
+    # Chạy mỗi ngày lúc 03:00 UTC (10:00 sáng giờ VN)
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download blocklists
+        run: |
+          mkdir -p tmp
+          curl -sSL "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/pro.txt" -o tmp/pro.txt
+          curl -sSL "https://cdn.jsdelivr.net/gh/hagezi/dns-blocklists@latest/adblock/tif.medium.txt" -o tmp/tif.medium.txt
+
+      - name: Convert || -> 0.0.0.0 (adblock -> hosts format)
+        run: |
+          # Chỉ thay thế 2 ký tự "||" ở ĐẦU dòng bằng "0.0.0.0 " (có dấu cách)
+          # Các dòng comment (! ...) hoặc không bắt đầu bằng || sẽ được giữ nguyên
+          sed -E 's/^\|\|/0.0.0.0 /' tmp/pro.txt > pro.txt
+          sed -E 's/^\|\|/0.0.0.0 /' tmp/tif.medium.txt > tif.medium.txt
+
+          # (Tuỳ chọn) Gộp 2 file thành 1 file duy nhất, bỏ dòng trùng
+          cat pro.txt tif.medium.txt | sort -u > merged.txt
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pro.txt tif.medium.txt merged.txt
+          if git diff --cached --quiet; then
+            echo "Không có thay đổi."
+          else
+            git commit -m "chore: update blocklist $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+          fi
